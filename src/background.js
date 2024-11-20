@@ -1,20 +1,42 @@
-'use strict';
+import { pipeline, env } from '@xenova/transformers';
 
-// With background scripts you can communicate with sidepanel
-// and contentScript files.
-// For more information on background script,
-// See https://developer.chrome.com/extensions/background_pages
+env.allowLocalModels = false;
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GREETINGS') {
-    const message =
-      "Hi Syd, my name is Bac. I am from Background. It's great to hear from you.";
+env.backends.onnx.wasm.numThreads = 1;
 
-    // Log message coming from the `request` parameter
-    console.log(request.payload.message);
-    // Send a response message
-    sendResponse({
-      message,
-    });
+class FeatureExtractorSingleton {
+  static model = 'Xenova/all-MiniLM-L6-v2';
+  static instance = null;
+
+  static async getInstance(progress_callback = null) {
+    if (this.instance === null) {
+      this.instance = pipeline('feature-extraction', this.model, {
+        progress_callback,
+      });
+    }
+    return this.instance;
   }
+}
+
+async function extractFeatures(text) {
+  const extractor = await FeatureExtractorSingleton.getInstance();
+  return extractor(text, {
+    pooling: 'mean',
+    normalize: false,
+  });
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action !== 'extractFeatures') return;
+
+  (async () => {
+    try {
+      const features = await extractFeatures(message.text);
+      sendResponse({ success: true, features });
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+  })();
+
+  return true;
 });

@@ -10,13 +10,21 @@
     "128": "icons/icon_128.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
   "side_panel": {
     "default_path": "sidepanel.html"
   },
-  "permissions": [
-    "sidePanel",
-    "tabs"
-  ]
+  "permissions": ["sidePanel", "tabs", "storage", "activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
 }

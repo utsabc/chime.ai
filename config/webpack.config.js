@@ -11,6 +11,7 @@ const config = (env, argv) =>
     entry: {
       sidepanel: PATHS.src + '/sidepanel.js',
       background: PATHS.src + '/background.js',
+      content: PATHS.src + '/content.js',
     },
     devtool: argv.mode === 'production' ? false : 'source-map',
   });
