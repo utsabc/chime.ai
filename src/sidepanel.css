@@ -303,3 +303,35 @@ header {
     opacity: 1;
   }
 }
+
+.message-references {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+  font-size: 0.9em;
+}
+
+.references-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #666;
+}
+
+.reference-link {
+  color: #2962ff;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin: 2px 0;
+  transition: background-color 0.2s;
+}
+
+.reference-link:hover {
+  background-color: #f5f5f5;
+}
+
+.ref-number {
+  font-weight: 600;
+  color: #1976d2;
+  margin-right: 8px;
+}

@@ -1,16 +1,36 @@
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 
-export const splitContent = async (text, chunkSize = 400) => {
+export const splitContent = async (text, config = {}) => {
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: chunkSize, // Each chunk will have 400 characters
-    chunkOverlap: 20, // 20 characters from the end of one chunk will overlap with the start of the next
+    chunkSize: config.chunkSize || 400,
+    chunkOverlap: config.chunkOverlap || 10,
   });
 
-  // Split the text into chunks
-  const output = await splitter.createDocuments([text]);
+  // Track current position
+  let currentPosition = 0;
+  const chunks = [];
 
-  return output.map((document) => document.pageContent);
-};
+  // Split the text into chunks with position tracking
+  const documents = await splitter.createDocuments([text]);
+  
+  for (const doc of documents) {
+    const chunkText = doc.pageContent;
+    const startPos = text.indexOf(chunkText, currentPosition);
+    const endPos = startPos + chunkText.length;
+    
+    chunks.push({
+      text: chunkText,
+      metadata: {
+        startPosition: startPos,
+        endPosition: endPos
+      }
+    });
+    
+    currentPosition = startPos + 1;
+  }
+
+  return chunks;
+}
 
 export function getTextContent() {
   // Get all elements from the body
