@@ -91,7 +91,7 @@ export class ChatManager {
       for (const chunk of chunks) {
         try {
           const embeddingResult = await this.featureExtractor.extractFeatures(
-            chunk
+            chunk.text
           );
           // Convert the embedding data structure to array
           const embedding = Array.from(
@@ -100,9 +100,11 @@ export class ChatManager {
           );
           await this.vectorDb.addRecord(
             {
-              text: chunk,
+              text: chunk.text,
               type: 'webpage_content',
               url: this.currentUrl,
+              startPosition: chunk.metadata.startPosition,
+              endPosition: chunk.metadata.endPosition,
             },
             embedding
           );
@@ -148,21 +150,34 @@ export class ChatManager {
         (doc) => doc.metadata.url === this.currentUrl
       );
 
-      // Construct prompt with context
-      const context = currentPageDocs
-        .map((doc) => doc.metadata.text)
+      // Format context with reference markers
+      const contextWithRefs = currentPageDocs.map((doc, index) => ({
+        text: doc.metadata.text,
+        ref: `[${index + 1}]`,
+        position: {
+          start: doc.metadata.startPosition,
+          end: doc.metadata.endPosition,
+        },
+      }));
+
+      const context = contextWithRefs
+        .map((c) => `${c.text} ${c.ref}`)
         .join('\n\n');
 
       const prompt = `Given the following context from the webpage (${this.currentUrl}):
       
 ${context}
 
-Based on this context, please respond to: ${userMessage}
+Use relevant information from the context, please respond to ${userMessage}. Provide annotations using [1], [2], etc. to reference specific parts of the context.
 
 If the context doesn't contain relevant information to answer the question, please let me know that you don't have enough information from the webpage to answer accurately.`;
 
-      // Get response stream from GPTNano
-      return this.gptNano.chat(prompt);
+      const response = await this.gptNano.chat(prompt);
+
+      return {
+        text: response,
+        references: contextWithRefs,
+      };
     } catch (error) {
       console.error('Chat error:', error);
       throw new Error('Failed to process chat: ' + error.message);
@@ -181,7 +196,7 @@ If the context doesn't contain relevant information to answer the question, plea
       // Split content into chunks
       const chunks = await splitContent(this.pageContent, 4000);
 
-      return this.gptNano.summarizeChunks(chunks);
+      return this.gptNano.summarizeChunks(chunks.map((c) => c.text));
     } catch {
       console.error('Chat error:', error);
       throw new Error('Failed to process chat: ' + error.message);

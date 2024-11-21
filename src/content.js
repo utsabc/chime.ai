@@ -33,6 +33,7 @@ function extractPageContent() {
   return extractText(body);
 }
 
+
 // Listen for content requests
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getContent') {

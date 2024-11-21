@@ -2,11 +2,24 @@ import './sidepanel.css';
 import DOMPurify from 'dompurify';
 import { ChatManager } from './lib/chatManager';
 
-
 (function () {
   let chatManager;
   let isInitializing = false;
   let isSummarizing = false;
+
+  function showReferencePopup(text) {
+    const popup = document.createElement('div');
+    popup.className = 'reference-popup';
+    popup.textContent = text;
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-popup';
+    closeButton.textContent = 'Close';
+    closeButton.onclick = () => document.body.removeChild(popup);
+
+    popup.appendChild(closeButton);
+    document.body.appendChild(popup);
+  }
 
   function formatMessage(text) {
     // Basic markdown parsing
@@ -34,9 +47,33 @@ import { ChatManager } from './lib/chatManager';
     if (isUser) {
       messageDiv.textContent = content;
     } else {
-      // Sanitize and set formatted HTML for AI responses
-      const formattedContent = formatMessage(content);
+      const { text, references } = content;
+
+      // Format the message with clickable references
+      const formattedContent = formatMessage(text);
       messageDiv.innerHTML = DOMPurify.sanitize(formattedContent);
+
+      // Add reference section if available
+      if (references && references.length > 0) {
+        const refsDiv = document.createElement('div');
+        refsDiv.className = 'message-references';
+
+        const refsTitle = document.createElement('div');
+        refsTitle.className = 'references-title';
+        refsTitle.textContent = 'References:';
+        refsDiv.appendChild(refsTitle);
+
+        references.forEach((ref, index) => {
+          const refButton = document.createElement('button');
+          refButton.className = 'reference-button';
+          refButton.textContent = index + 1;
+          refButton.title = ref.text;
+          refButton.onclick = () => showReferencePopup(ref.text);
+
+          refsDiv.appendChild(refButton);
+        });
+        messageDiv.appendChild(refsDiv);
+      }
     }
     messagesDiv.appendChild(messageDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -44,6 +81,7 @@ import { ChatManager } from './lib/chatManager';
 
   async function handleSendMessage() {
     const input = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-message');
     const message = input.value.trim();
 
     if (!message || isInitializing) return;
@@ -54,6 +92,10 @@ import { ChatManager } from './lib/chatManager';
     // Display user message
     appendMessage(message, true);
 
+    input.disabled = true;
+    sendButton.disabled = true;
+    sendButton.classList.add('loading');
+
     try {
       // Get AI response
       const response = await chatManager.chat(message);
@@ -62,9 +104,15 @@ import { ChatManager } from './lib/chatManager';
     } catch (error) {
       console.error('Chat error:', error);
       appendMessage(
-        'Sorry, there was an error processing your message.',
+        {
+          text: 'Sorry, there was an error processing your message. Close the side panel and try again',
+        },
         false
       );
+    } finally {
+      input.disabled = false;
+      sendButton.disabled = false;
+      sendButton.classList.remove('loading');
     }
   }
 
@@ -86,7 +134,7 @@ import { ChatManager } from './lib/chatManager';
       </svg>
     `;
       // Display a message indicating summarization has started
-      appendMessage('Generating page summary...', false);
+      appendMessage({ text: 'Generating page summary...' }, false);
 
       // Get the summary
       const summary = await chatManager.summarize();
@@ -96,10 +144,13 @@ import { ChatManager } from './lib/chatManager';
       messages.removeChild(messages.lastChild);
 
       // Display the summary
-      appendMessage('📝 Page Summary:\n\n' + summary, false);
+      appendMessage({ text: '📝 Page Summary:\n\n' + summary }, false);
     } catch (error) {
       console.error('Summarization error:', error);
-      appendMessage('Sorry, there was an error generating the summary.', false);
+      appendMessage(
+        { text: 'Sorry, there was an error generating the summary.' },
+        false
+      );
     } finally {
       // Reset button state
       button.disabled = false;
@@ -118,11 +169,16 @@ import { ChatManager } from './lib/chatManager';
     if (isInitializing) return;
     isInitializing = true;
 
-     const summarizeButton = document.getElementById('summarize-button');
-     summarizeButton.disabled = true;
+    const summarizeButton = document.getElementById('summarize-button');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-message');
+    summarizeButton.disabled = true;
+    chatInput.disabled = true;
+    sendButton.disabled = true;
+    sendButton.classList.add('loading');
 
     // Show initialization message
-    appendMessage('Initializing chat system...', false);
+    appendMessage({ text: 'Initializing chat system...' }, false);
 
     try {
       chatManager = new ChatManager();
@@ -133,12 +189,17 @@ import { ChatManager } from './lib/chatManager';
       messages.lastChild.textContent =
         'Chat system ready! You can now ask questions about the webpage content.';
 
-      // Enable the summarize button
+      // Enable the summarize button and chat input
       summarizeButton.disabled = false;
+      chatInput.disabled = false;
+      sendButton.disabled = false;
+      sendButton.classList.remove('loading');
     } catch (error) {
       console.error('Initialization error:', error);
       appendMessage(
-        'Failed to initialize chat system. Please refresh and try again.',
+        {
+          text: 'Failed to initialize chat system. Please refresh and try again.',
+        },
         false
       );
     } finally {
