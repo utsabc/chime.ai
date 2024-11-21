@@ -168,8 +168,7 @@ export class ChatManager {
       
 ${context}
 
-Based on this context, please respond to: ${userMessage}
-Include the reference numbers [1], [2], etc. when citing specific parts of the context.
+Use relevant information from the context, please respond to ${userMessage}. Provide annotations using [1], [2], etc. to reference specific parts of the context.
 
 If the context doesn't contain relevant information to answer the question, please let me know that you don't have enough information from the webpage to answer accurately.`;
 
@@ -197,7 +196,7 @@ If the context doesn't contain relevant information to answer the question, plea
       // Split content into chunks
       const chunks = await splitContent(this.pageContent, 4000);
 
-      return this.gptNano.summarizeChunks(chunks);
+      return this.gptNano.summarizeChunks(chunks.map((c) => c.text));
     } catch {
       console.error('Chat error:', error);
       throw new Error('Failed to process chat: ' + error.message);

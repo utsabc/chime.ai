@@ -24,30 +24,6 @@ import { ChatManager } from './lib/chatManager';
     );
   }
 
-  async function highlightTextInPage(start, end) {
-    try {
-      // Get the current active tab
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-
-      if (!tab) {
-        console.error('No active tab found');
-        return;
-      }
-
-      // Send message to content script to highlight text
-      await chrome.tabs.sendMessage(tab.id, {
-        action: 'highlightText',
-        start: start,
-        end: end,
-      });
-    } catch (error) {
-      console.error('Error highlighting text:', error);
-    }
-  }
-
   function appendMessage(content, isUser) {
     const messagesDiv = document.getElementById('chat-messages');
     const messageDiv = document.createElement('div');
@@ -67,21 +43,22 @@ import { ChatManager } from './lib/chatManager';
       if (references && references.length > 0) {
         const refsDiv = document.createElement('div');
         refsDiv.className = 'message-references';
-        
+
         const refsTitle = document.createElement('div');
         refsTitle.className = 'references-title';
         refsTitle.textContent = 'References:';
         refsDiv.appendChild(refsTitle);
 
-        references.forEach(ref => {
+        references.forEach((ref) => {
           const refLink = document.createElement('div');
           refLink.className = 'reference-link';
           // Truncate text and add ellipsis if too long
-          const truncatedText = ref.text.length > 100 
-            ? ref.text.substring(0, 100) + '...' 
-            : ref.text;
-          refLink.innerHTML = `<span class="ref-number">${ref.ref}</span> ${truncatedText}`;
-          refLink.onclick = () => highlightTextInPage(ref.position.start, ref.position.end);
+          const truncatedText =
+            ref.text.length > 50 ? ref.text.substring(0, 50) + '...' : ref.text;
+          refLink.innerHTML = `<span class="ref-number">${ref.ref}${truncatedText}</span>`;
+
+          // Add hover effect to show full text
+          refLink.title = ref.text;
           refsDiv.appendChild(refLink);
         });
         messageDiv.appendChild(refsDiv);
@@ -93,6 +70,7 @@ import { ChatManager } from './lib/chatManager';
 
   async function handleSendMessage() {
     const input = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-message');
     const message = input.value.trim();
 
     if (!message || isInitializing) return;
@@ -103,6 +81,10 @@ import { ChatManager } from './lib/chatManager';
     // Display user message
     appendMessage(message, true);
 
+    input.disabled = true;
+    sendButton.disabled = true;
+    sendButton.classList.add('loading');
+
     try {
       // Get AI response
       const response = await chatManager.chat(message);
@@ -111,9 +93,15 @@ import { ChatManager } from './lib/chatManager';
     } catch (error) {
       console.error('Chat error:', error);
       appendMessage(
-        { text: 'Sorry, there was an error processing your message.' },
+        {
+          text: 'Sorry, there was an error processing your message. Close the side panel and try again',
+        },
         false
       );
+    } finally {
+      input.disabled = false;
+      sendButton.disabled = false;
+      sendButton.classList.remove('loading');
     }
   }
 
@@ -171,7 +159,12 @@ import { ChatManager } from './lib/chatManager';
     isInitializing = true;
 
     const summarizeButton = document.getElementById('summarize-button');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-message');
     summarizeButton.disabled = true;
+    chatInput.disabled = true;
+    sendButton.disabled = true;
+    sendButton.classList.add('loading');
 
     // Show initialization message
     appendMessage({ text: 'Initializing chat system...' }, false);
@@ -185,8 +178,11 @@ import { ChatManager } from './lib/chatManager';
       messages.lastChild.textContent =
         'Chat system ready! You can now ask questions about the webpage content.';
 
-      // Enable the summarize button
+      // Enable the summarize button and chat input
       summarizeButton.disabled = false;
+      chatInput.disabled = false;
+      sendButton.disabled = false;
+      sendButton.classList.remove('loading');
     } catch (error) {
       console.error('Initialization error:', error);
       appendMessage(

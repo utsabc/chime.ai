@@ -113,6 +113,25 @@ code {
   gap: 10px;
 }
 
+#send-message.loading {
+  animation: pulsate 1.5s infinite;
+}
+
+@keyframes pulsate {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+
 .message {
   padding: 10px 15px;
   border-radius: 10px;
@@ -135,6 +154,8 @@ code {
   border-top: 1px solid #eee;
   display: flex;
   gap: 10px;
+  position: fixed;
+  bottom: 0;
 }
 
 #chat-input {
@@ -283,6 +304,7 @@ header {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  margin-bottom: 120px;
 }
 
 /* Update loading state styles */
@@ -318,7 +340,7 @@ header {
 }
 
 .reference-link {
-  color: #2962ff;
+  color: #222;
   cursor: pointer;
   padding: 6px 8px;
   border-radius: 4px;
@@ -331,7 +353,7 @@ header {
 }
 
 .ref-number {
-  font-weight: 600;
-  color: #1976d2;
+  font-weight: 300;
+  color: #1f1d1d;
   margin-right: 8px;
 }
