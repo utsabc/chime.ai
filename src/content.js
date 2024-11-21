@@ -40,9 +40,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const content = extractPageContent();
     const url = window.location.href;
     sendResponse({ content, url });
-  } else if (request.action === 'highlightText') {
-    highlightText(request.start, request.end);
-    sendResponse({ success: true });
   }
   return true; // Keep the message channel open for async response
 });
