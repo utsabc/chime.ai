@@ -7,6 +7,20 @@ import { ChatManager } from './lib/chatManager';
   let isInitializing = false;
   let isSummarizing = false;
 
+  function showReferencePopup(text) {
+    const popup = document.createElement('div');
+    popup.className = 'reference-popup';
+    popup.textContent = text;
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-popup';
+    closeButton.textContent = 'Close';
+    closeButton.onclick = () => document.body.removeChild(popup);
+
+    popup.appendChild(closeButton);
+    document.body.appendChild(popup);
+  }
+
   function formatMessage(text) {
     // Basic markdown parsing
     return (
@@ -49,17 +63,14 @@ import { ChatManager } from './lib/chatManager';
         refsTitle.textContent = 'References:';
         refsDiv.appendChild(refsTitle);
 
-        references.forEach((ref) => {
-          const refLink = document.createElement('div');
-          refLink.className = 'reference-link';
-          // Truncate text and add ellipsis if too long
-          const truncatedText =
-            ref.text.length > 50 ? ref.text.substring(0, 50) + '...' : ref.text;
-          refLink.innerHTML = `<span class="ref-number">${ref.ref}${truncatedText}</span>`;
+        references.forEach((ref, index) => {
+          const refButton = document.createElement('button');
+          refButton.className = 'reference-button';
+          refButton.textContent = index + 1;
+          refButton.title = ref.text;
+          refButton.onclick = () => showReferencePopup(ref.text);
 
-          // Add hover effect to show full text
-          refLink.title = ref.text;
-          refsDiv.appendChild(refLink);
+          refsDiv.appendChild(refButton);
         });
         messageDiv.appendChild(refsDiv);
       }
