@@ -164,13 +164,9 @@ export class ChatManager {
         .map((c) => `${c.text} ${c.ref}`)
         .join('\n\n');
 
-      const prompt = `Given the following context from the webpage (${this.currentUrl}):
-      
-${context}
-
-Use relevant information from the context, please respond to ${userMessage}. Provide annotations using [1], [2], etc. to reference specific parts of the context.
-
-If the context doesn't contain relevant information to answer the question, please let me know that you don't have enough information from the webpage to answer accurately.`;
+      const prompt = `Given the following context from the webpage (${this.currentUrl}): 
+      ${context}
+      Use relevant information from the context, please respond to ${userMessage}. If the context doesn't contain relevant information to answer the question, please let me know that you don't have enough information from the webpage to answer accurately.`;
 
       const response = await this.gptNano.chat(prompt);
 
@@ -182,6 +178,60 @@ If the context doesn't contain relevant information to answer the question, plea
       console.error('Chat error:', error);
       throw new Error('Failed to process chat: ' + error.message);
     }
+  }
+
+  async linguisticChat(userMessage) {
+    // Get the language of the user message
+    const userLanguage = await this.detectLanguage(userMessage);
+    if (!userLanguage) {
+      throw new Error('Failed to detect language of user message');
+    }
+
+    if (userLanguage === 'en') {
+      // If the user message is already in English, chat directly
+      return this.chat(userMessage);
+    }
+
+    if (!this.gptNano.isSupportedLanguage(userLanguage)) {
+      throw new Error('Unsupported language: ' + userLanguage);
+    }
+
+    // Translate the user message to English
+    const englishMessage = await this.gptNano.translate(userMessage, {
+      source: userLanguage,
+      target: 'en',
+    });
+    if (!englishMessage) {
+      throw new Error('Translation failed');
+    }
+
+    // Chat with the AI
+    const aiResponse = await this.chat(englishMessage);
+
+    // Translate the AI response back to the user's language
+    const userResponse = await this.gptNano.translate(aiResponse.text, {
+      source: 'en',
+      target: userLanguage,
+    });
+    if (!userResponse) {
+      throw new Error('Translation failed');
+    }
+
+    // Translate the references back to the user's language
+    const translatedReferences = await Promise.all(
+      aiResponse.references.map(async (ref) => {
+        const translatedText = await this.gptNano.translate(ref.text, {
+          source: 'en',
+          target: userLanguage,
+        });
+        return { text: translatedText, position: ref.position, ref: ref.ref };
+      })
+    );
+
+    return {
+      text: userResponse,
+      references: translatedReferences,
+    };
   }
 
   async summarize() {
@@ -200,6 +250,38 @@ If the context doesn't contain relevant information to answer the question, plea
     } catch {
       console.error('Chat error:', error);
       throw new Error('Failed to process chat: ' + error.message);
+    }
+  }
+
+  async detectLanguage(text) {
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      if (!tab) {
+        throw new Error('No active tab found');
+      }
+
+      // Send message to content script
+      const response = await new Promise((resolve) => {
+        chrome.tabs.sendMessage(
+          tab.id,
+          { action: 'detectLanguage', text },
+          resolve
+        );
+      });
+
+      if (response) {
+        return response.detectedLanguage;
+      } else {
+        console.error('No language detected');
+        return '';
+      }
+    } catch (error) {
+      console.error('Language detection error:', error);
+      throw new Error('Failed to detect language: ' + error.message);
     }
   }
 }

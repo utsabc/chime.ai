@@ -21,6 +21,32 @@ import { ChatManager } from './lib/chatManager';
     document.body.appendChild(popup);
   }
 
+
+  function showReferencePopup(text) {
+    const popup = document.createElement('div');
+    popup.className = 'reference-popup';
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-popup';
+    closeButton.innerHTML = '&times;';
+    closeButton.onclick = () => document.body.removeChild(popup);
+
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-popup';
+    copyButton.innerHTML = '📋';
+    copyButton.onclick = () => {
+      navigator.clipboard.writeText(text);
+    };
+
+    const textContent = document.createElement('div');
+    textContent.className = 'popup-text';
+    textContent.textContent = text;
+
+    popup.appendChild(closeButton);
+    popup.appendChild(copyButton);
+    popup.appendChild(textContent);
+    document.body.appendChild(popup);
+  }
   function formatMessage(text) {
     // Basic markdown parsing
     return (
@@ -98,14 +124,14 @@ import { ChatManager } from './lib/chatManager';
 
     try {
       // Get AI response
-      const response = await chatManager.chat(message);
+      const response = await chatManager.linguisticChat(message);
       // Display AI response
       appendMessage(response, false);
     } catch (error) {
       console.error('Chat error:', error);
       appendMessage(
         {
-          text: 'Sorry, there was an error processing your message. Close the side panel and try again',
+          text: 'Sorry, there was an error processing your message. Close the side panel and try again \n\nError: ' + error.message,
         },
         false
       );
