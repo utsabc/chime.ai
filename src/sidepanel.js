@@ -10,21 +10,6 @@ import { ChatManager } from './lib/chatManager';
   function showReferencePopup(text) {
     const popup = document.createElement('div');
     popup.className = 'reference-popup';
-    popup.textContent = text;
-
-    const closeButton = document.createElement('button');
-    closeButton.className = 'close-popup';
-    closeButton.textContent = 'Close';
-    closeButton.onclick = () => document.body.removeChild(popup);
-
-    popup.appendChild(closeButton);
-    document.body.appendChild(popup);
-  }
-
-
-  function showReferencePopup(text) {
-    const popup = document.createElement('div');
-    popup.className = 'reference-popup';
 
     const closeButton = document.createElement('button');
     closeButton.className = 'close-popup';
