@@ -131,7 +131,7 @@ export class GPTNano {
     return summary;
   }
 
-  async summarizeChunks(chunks, language = 'en') {
+  async summarizeChunks(chunks) {
     // Summarize each chunk individually
     const chunkSummaries = [];
     for (const chunk of chunks) {
@@ -139,13 +139,17 @@ export class GPTNano {
       chunkSummaries.push(summary);
     }
 
+    let summary;
+
     // If we have multiple summaries, combine them and summarize again
     if (chunkSummaries.length > 1) {
       const combinedSummaries = chunkSummaries.join('\n\n');
-      return this.summarize(combinedSummaries);
+      summary = await this.summarize(combinedSummaries);
+    } else {
+      summary = chunkSummaries[0];
     }
 
-    return chunkSummaries[0];
+    return summary;
   }
 
   async translate(text, { source, target }) {

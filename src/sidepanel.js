@@ -6,15 +6,24 @@ import { ChatManager } from './lib/chatManager';
   let chatManager;
   let isInitializing = false;
   let isSummarizing = false;
+  let currentPopup = null;
 
   function showReferencePopup(text) {
+    // Remove any existing popup
+    if (currentPopup) {
+      document.body.removeChild(currentPopup);
+    }
+
     const popup = document.createElement('div');
     popup.className = 'reference-popup';
 
     const closeButton = document.createElement('button');
     closeButton.className = 'close-popup';
     closeButton.innerHTML = '&times;';
-    closeButton.onclick = () => document.body.removeChild(popup);
+     closeButton.onclick = () => {
+       document.body.removeChild(popup);
+       currentPopup = null;
+     };
 
     const copyButton = document.createElement('button');
     copyButton.className = 'copy-popup';
@@ -31,7 +40,11 @@ import { ChatManager } from './lib/chatManager';
     popup.appendChild(copyButton);
     popup.appendChild(textContent);
     document.body.appendChild(popup);
+
+    // Set the current popup
+    currentPopup = popup;
   }
+  
   function formatMessage(text) {
     // Basic markdown parsing
     return (
@@ -116,7 +129,9 @@ import { ChatManager } from './lib/chatManager';
       console.error('Chat error:', error);
       appendMessage(
         {
-          text: 'Sorry, there was an error processing your message. Close the side panel and try again \n\nError: ' + error.message,
+          text:
+            'Sorry, there was an error processing your message. Close the side panel and try again \n\nError: ' +
+            error.message,
         },
         false
       );
@@ -129,6 +144,9 @@ import { ChatManager } from './lib/chatManager';
 
   async function handleSummarize() {
     const button = document.getElementById('summarize-button');
+    const languageSelect = document.getElementById('language-select');
+    const selectedLanguage = languageSelect.value;
+
     if (isSummarizing || !chatManager) return;
 
     try {
@@ -148,7 +166,7 @@ import { ChatManager } from './lib/chatManager';
       appendMessage({ text: 'Generating page summary...' }, false);
 
       // Get the summary
-      const summary = await chatManager.summarize();
+      const summary = await chatManager.summarize(selectedLanguage);
 
       // Remove the "generating" message
       const messages = document.getElementById('chat-messages');

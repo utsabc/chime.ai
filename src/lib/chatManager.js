@@ -11,6 +11,10 @@ export class ChatManager {
     this.pageContentProcessed = false;
     this.pageContent = '';
     this.currentUrl = '';
+    this.enPageContent = '';
+    this.pageLang = undefined;
+    this.enSummary = '';
+    this.langSummaries = new Map();
   }
 
   async initialize() {
@@ -38,6 +42,7 @@ export class ChatManager {
 
       // Process the content if available
       if (this.pageContent) {
+        await this.getEnPageContent();
         await this.processPageContent();
       }
     } catch (error) {
@@ -66,6 +71,7 @@ export class ChatManager {
       if (response) {
         this.currentUrl = response.url;
         this.pageContent = response.content;
+        this.pageLang = response.language;
       } else {
         console.error('No content received from page');
         this.currentUrl = '';
@@ -77,12 +83,60 @@ export class ChatManager {
     }
   }
 
+  async getEnPageContent() {
+    if (!this.pageContent) {
+      throw new Error('No page content available');
+    }
+
+    if (this.enPageContent) {
+      return this.enPageContent;
+    }
+
+    // If the page content is already in English, or the language is unknown, or unsupported, return the original content
+    if (
+      this.pageLang === 'en' ||
+      this.pageLang === undefined ||
+      !this.gptNano.isSupportedLanguage(this.pageLang)
+    ) {
+      this.enPageContent = this.pageContent;
+      return this.enPageContent;
+    }
+
+    // Break the content into chunks
+    const chunks = await splitContent(this.pageContent);
+
+    // Translate each chunk to English
+    const enChunks = await Promise.all(
+      chunks.map(async (chunk) => {
+        const enChunk = await this.gptNano.translate(chunk.text, {
+          source: this.pageLang,
+          target: 'en',
+        });
+        return enChunk;
+      })
+    );
+
+    // Combine the translated chunks
+    this.enPageContent = enChunks.join('');
+
+  }
+
   async processPageContent() {
-    if (this.pageContentProcessed || !this.pageContent) return;
+    if (this.pageContentProcessed) {
+      return;
+    }
+
+    if (!this.pageContent) {
+      throw new Error('No page content available');
+    }
+
+    if (!this.enPageContent) {
+      await this.getEnPageContent();
+    }
 
     try {
       // Split content into chunks
-      const chunks = await splitContent(this.pageContent);
+      const chunks = await splitContent(this.enPageContent);
 
       // Clear existing data
       await this.vectorDb.clearDatabase();
@@ -234,22 +288,64 @@ export class ChatManager {
     };
   }
 
-  async summarize() {
+  // const maxTokensPerChunk = 1024 - 26;
+  async getDynamicPageChunks(content, maxTokensPerChunk = 998) {
+    // Estimate the number of tokens in the content
+    const estimatedTokens = Math.ceil(content.length / 4);
+
+    // Calculate the number of chunks needed
+    const numChunks = Math.ceil(estimatedTokens / maxTokensPerChunk);
+
+    // Split content into chunks
+    const chunkSize = Math.ceil(content.length / numChunks);
+    const chunks = await splitContent(content, {
+      chunkSize: chunkSize,
+      chunkOverlap: 20,
+    });
+    return chunks;
+  }
+
+  async getEnSummary() {
+    if (!this.featureExtractor || !this.gptNano.ai) {
+      throw new Error('Chat system not fully initialized');
+    }
+
+    if (!this.pageContentProcessed) {
+      throw new Error('Page content not yet processed');
+    }
+
+    const chunks = await this.getDynamicPageChunks(this.enPageContent);
+
+    const enSummary = await this.gptNano.summarizeChunks(
+      chunks.map((c) => c.text)
+    );
+    return enSummary;
+  }
+
+  async summarize(language = 'en') {
     try {
-      if (!this.featureExtractor || !this.gptNano.ai) {
-        throw new Error('Chat system not fully initialized');
+      if (this.enSummary.length === 0) {
+        this.enSummary = await this.getEnSummary();
       }
 
-      if (!this.pageContentProcessed) {
-        throw new Error('Page content not yet processed');
+      if (language === 'en') {
+        return this.enSummary;
       }
-      // Split content into chunks
-      const chunks = await splitContent(this.pageContent, 4000);
 
-      return this.gptNano.summarizeChunks(chunks.map((c) => c.text));
-    } catch {
-      console.error('Chat error:', error);
-      throw new Error('Failed to process chat: ' + error.message);
+      if (this.langSummaries.has(language)) {
+        return this.langSummaries.get(language);
+      }
+
+      const translatedSummary = await this.gptNano.translate(this.enSummary, {
+        source: 'en',
+        target: language,
+      });
+
+      this.langSummaries.set(language, translatedSummary);
+      return translatedSummary;
+    } catch (error) {
+      console.error('Summary error:', error);
+      throw new Error('Failed to process Summary: ' + error.message);
     }
   }
 

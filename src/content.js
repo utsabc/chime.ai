@@ -33,6 +33,21 @@ function extractPageContent() {
   return extractText(body);
 }
 
+function getPageLanguage() {
+  // Method 1: HTML lang attribute (most reliable if present)
+  const htmlLang = document.documentElement.lang;
+
+  // Method 2: Meta tag
+  const metaLang =
+    document.querySelector('meta[http-equiv="content-language"]')?.content ||
+    document.querySelector('meta[name="language"]')?.content;
+
+  // Method 3: From browser
+  const navigatorLang = navigator.language;
+
+  return htmlLang || metaLang || navigatorLang;
+}
+
 async function initialiseLanguageDetector() {
   const canDetect = await translation.canDetect();
   let detector;
@@ -56,15 +71,14 @@ async function initialiseLanguageDetector() {
 }
 
 let languageDetector;
-
 // Listen for content requests
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   (async () => {
     try {
       if (request.action === 'getContent') {
         const content = extractPageContent();
         const url = window.location.href;
-        sendResponse({ content, url });
+        sendResponse({ content, url, language: getPageLanguage() });
       } else if (request.action === 'detectLanguage') {
         languageDetector =
           languageDetector || (await initialiseLanguageDetector());
@@ -79,6 +93,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: false, error: error.message });
     }
   })();
-
   return true; // Keep the message channel open for async response
 });
