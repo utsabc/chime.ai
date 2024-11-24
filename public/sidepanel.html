@@ -15,27 +15,30 @@
           <img src="icons/icon_32.png" alt="G Chime" class="header-icon" />
         </div>
         <div class="header-actions">
-          <select id="language-select" class="language-select">
-            <option value="en">English</option>
-            <option value="ar">Arabic</option>
-            <option value="bn">Bengali</option>
-            <option value="de">German</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="hi">Hindi</option>
-            <option value="it">Italian</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="nl">Dutch</option>
-            <option value="pl">Polish</option>
-            <option value="pt">Portuguese</option>
-            <option value="ru">Russian</option>
-            <option value="th">Thai</option>
-            <option value="tr">Turkish</option>
-            <option value="vi">Vietnamese</option>
-            <option value="zh">Chinese (Simplified)</option>
-            <option value="zh-Hant">Chinese (Traditional)</option>
-          </select>
+          <div class="language-select-container">
+            <select id="language-select" class="language-select">
+              <option value="en">English</option>
+              <option value="ar">Arabic</option>
+              <option value="bn">Bengali</option>
+              <option value="de">German</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="hi">Hindi</option>
+              <option value="it">Italian</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="nl">Dutch</option>
+              <option value="pl">Polish</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+              <option value="th">Thai</option>
+              <option value="tr">Turkish</option>
+              <option value="vi">Vietnamese</option>
+              <option value="zh">Chinese (Simplified)</option>
+              <option value="zh-Hant">Chinese (Traditional)</option>
+            </select>
+            <span class="tooltip">Select the language for the summary output</span>
+          </div>
           <button id="summarize-button" class="icon-button" title="Summarize Page">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 5h16M4 12h16M4 19h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>

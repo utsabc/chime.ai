@@ -390,7 +390,7 @@ header {
   width: 300px;
   max-width: 80%;
   border-radius: 8px;
-  position: relative;
+
 }
 
 .close-popup {
@@ -443,4 +443,42 @@ header {
 .language-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.language-select-container {
+  position: relative;
+  display: inline-block;
+}
+
+.language-select-container .tooltip {
+  visibility: hidden;
+  width: 200px;
+  background-color: #212529;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  top: 125%; /* Position the tooltip below the select box */
+  left: 50%;
+  margin-left: -100px; /* Center the tooltip */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.language-select-container .tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%; /* At the top of the tooltip */
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #212529 transparent;
+}
+
+.language-select-container:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
 }
