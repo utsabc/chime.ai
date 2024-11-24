@@ -33,13 +33,65 @@ function extractPageContent() {
   return extractText(body);
 }
 
+function getPageLanguage() {
+  // Method 1: HTML lang attribute (most reliable if present)
+  const htmlLang = document.documentElement.lang;
 
-// Listen for content requests
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'getContent') {
-    const content = extractPageContent();
-    const url = window.location.href;
-    sendResponse({ content, url });
+  // Method 2: Meta tag
+  const metaLang =
+    document.querySelector('meta[http-equiv="content-language"]')?.content ||
+    document.querySelector('meta[name="language"]')?.content;
+
+  // Method 3: From browser
+  const navigatorLang = navigator.language;
+
+  return htmlLang || metaLang || navigatorLang;
+}
+
+async function initialiseLanguageDetector() {
+  const canDetect = await translation.canDetect();
+  let detector;
+  if (canDetect !== 'no') {
+    if (canDetect === 'readily') {
+      // The language detector can immediately be used.
+      detector = await translation.createDetector();
+      console.log('Detector ready');
+    } else {
+      // The language detector can be used after the model download.
+      detector = await translation.createDetector();
+      detector.addEventListener('downloadprogress', (e) => {
+        console.log(e.loaded, e.total);
+      });
+      await detector.ready;
+    }
+  } else {
+    console.error('Language detector is not available.');
   }
+  return detector;
+}
+
+let languageDetector;
+// Listen for content requests
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  (async () => {
+    try {
+      if (request.action === 'getContent') {
+        const content = extractPageContent();
+        const url = window.location.href;
+        sendResponse({ content, url, language: getPageLanguage() });
+      } else if (request.action === 'detectLanguage') {
+        languageDetector =
+          languageDetector || (await initialiseLanguageDetector());
+        const { text } = request;
+        const language = await languageDetector.detect(text);
+        const { detectedLanguage } = language[0];
+        sendResponse({ detectedLanguage });
+      } else {
+        throw new Error('Unknown action');
+      }
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+  })();
   return true; // Keep the message channel open for async response
 });

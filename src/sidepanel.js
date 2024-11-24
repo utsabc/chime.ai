@@ -6,21 +6,45 @@ import { ChatManager } from './lib/chatManager';
   let chatManager;
   let isInitializing = false;
   let isSummarizing = false;
+  let currentPopup = null;
 
   function showReferencePopup(text) {
+    // Remove any existing popup
+    if (currentPopup) {
+      document.body.removeChild(currentPopup);
+    }
+
     const popup = document.createElement('div');
     popup.className = 'reference-popup';
-    popup.textContent = text;
 
     const closeButton = document.createElement('button');
     closeButton.className = 'close-popup';
-    closeButton.textContent = 'Close';
-    closeButton.onclick = () => document.body.removeChild(popup);
+    closeButton.innerHTML = '&times;';
+     closeButton.onclick = () => {
+       document.body.removeChild(popup);
+       currentPopup = null;
+     };
+
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-popup';
+    copyButton.innerHTML = '📋';
+    copyButton.onclick = () => {
+      navigator.clipboard.writeText(text);
+    };
+
+    const textContent = document.createElement('div');
+    textContent.className = 'popup-text';
+    textContent.textContent = text;
 
     popup.appendChild(closeButton);
+    popup.appendChild(copyButton);
+    popup.appendChild(textContent);
     document.body.appendChild(popup);
-  }
 
+    // Set the current popup
+    currentPopup = popup;
+  }
+  
   function formatMessage(text) {
     // Basic markdown parsing
     return (
@@ -98,14 +122,16 @@ import { ChatManager } from './lib/chatManager';
 
     try {
       // Get AI response
-      const response = await chatManager.chat(message);
+      const response = await chatManager.linguisticChat(message);
       // Display AI response
       appendMessage(response, false);
     } catch (error) {
       console.error('Chat error:', error);
       appendMessage(
         {
-          text: 'Sorry, there was an error processing your message. Close the side panel and try again',
+          text:
+            'Sorry, there was an error processing your message. Close the side panel and try again \n\nError: ' +
+            error.message,
         },
         false
       );
@@ -118,6 +144,9 @@ import { ChatManager } from './lib/chatManager';
 
   async function handleSummarize() {
     const button = document.getElementById('summarize-button');
+    const languageSelect = document.getElementById('language-select');
+    const selectedLanguage = languageSelect.value;
+
     if (isSummarizing || !chatManager) return;
 
     try {
@@ -137,7 +166,7 @@ import { ChatManager } from './lib/chatManager';
       appendMessage({ text: 'Generating page summary...' }, false);
 
       // Get the summary
-      const summary = await chatManager.summarize();
+      const summary = await chatManager.summarize(selectedLanguage);
 
       // Remove the "generating" message
       const messages = document.getElementById('chat-messages');
