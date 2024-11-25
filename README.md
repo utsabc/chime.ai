@@ -38,6 +38,10 @@ chime.ai is a Chrome extension that provides a chat assistant for webpages. It c
   - Ensures that summaries, prompts, and chats respect the original language of the content.
 
 
+## Known Issues
+The summarisation AMI sometime failues over long form content
+
+
 ## Installation
 
 1. Clone the repository:
