@@ -23,6 +23,7 @@ export class GPTNano {
   constructor() {
     this.version = '1.0.0';
     this.ai = null;
+    this.systemPrompt = 'You are a friendly, helpful assistant';
     this.initializeAI();
   }
   async initializeAI() {
@@ -64,13 +65,12 @@ export class GPTNano {
 
   async initialiseChatSession() {
     // Start by checking if it's possible to create a session based on the availability of the model, and the characteristics of the device.
-    const { available, defaultTemperature, defaultTopK, maxTopK } =
-      await ai.languageModel.capabilities();
+    const { available } = await ai.languageModel.capabilities();
 
     let session;
     if (available !== 'no') {
       session = await ai.languageModel.create({
-        systemPrompt: 'You are a friendly, helpful assistant',
+        systemPrompt: this.systemPrompt,
         monitor(m) {
           m.addEventListener('downloadprogress', (e) => {
             console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`);
@@ -81,6 +81,14 @@ export class GPTNano {
       console.error('Chat is not available.');
     }
     return session;
+  }
+
+  async updateSystemPrompt(newPrompt) {
+    this.systemPrompt = newPrompt;
+    // Reinitialize chat session with new system prompt
+    if (this.ai?.chatSession) {
+      this.ai.chatSession = await this.initialiseChatSession();
+    }
   }
 
   async initialiseTranslator(languagePair) {
@@ -103,7 +111,9 @@ export class GPTNano {
   }
 
   async getTranslationModel(sourceLanguage, targetLanguage) {
-    let translator = this.ai.translator.get(`${sourceLanguage}#${targetLanguage}`);
+    let translator = this.ai.translator.get(
+      `${sourceLanguage}#${targetLanguage}`
+    );
     if (translator) {
       return translator;
     }
