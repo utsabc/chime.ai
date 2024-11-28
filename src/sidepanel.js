@@ -20,10 +20,10 @@ import { ChatManager } from './lib/chatManager';
     const closeButton = document.createElement('button');
     closeButton.className = 'close-popup';
     closeButton.innerHTML = '&times;';
-     closeButton.onclick = () => {
-       document.body.removeChild(popup);
-       currentPopup = null;
-     };
+    closeButton.onclick = () => {
+      document.body.removeChild(popup);
+      currentPopup = null;
+    };
 
     const copyButton = document.createElement('button');
     copyButton.className = 'copy-popup';
@@ -44,7 +44,7 @@ import { ChatManager } from './lib/chatManager';
     // Set the current popup
     currentPopup = popup;
   }
-  
+
   function formatMessage(text) {
     // Basic markdown parsing
     return (
@@ -194,6 +194,64 @@ import { ChatManager } from './lib/chatManager';
     }
   }
 
+  function setupSettingsPanel() {
+    const settingsButton = document.getElementById('settings-button');
+    const settingsPanel = document.getElementById('settings-panel');
+    const systemPromptInput = document.getElementById('system-prompt');
+    const saveSettingsButton = document.getElementById('save-settings');
+
+    // Load saved system prompt
+    chrome.storage.local.get(['chimeSystemPrompt'], (result) => {
+      if (result.systemPrompt) {
+        systemPromptInput.value = result.systemPrompt;
+        if (chatManager) {
+          chatManager.gptNano.updateSystemPrompt(result.systemPrompt);
+        }
+      }
+    });
+
+    // Toggle settings panel
+    settingsButton.addEventListener('click', () => {
+      settingsPanel.classList.toggle('hidden');
+    });
+
+    // Close settings panel when clicking outside
+    document.addEventListener('click', (event) => {
+      if (
+        !settingsPanel.contains(event.target) &&
+        !settingsButton.contains(event.target) &&
+        !settingsPanel.classList.contains('hidden')
+      ) {
+        settingsPanel.classList.add('hidden');
+      }
+    });
+
+    // Save settings
+    saveSettingsButton.addEventListener('click', async () => {
+      const newPrompt = systemPromptInput.value.trim();
+
+      try {
+        // Save to storage
+        await chrome.storage.local.set({ chimeSystemPrompt: newPrompt });
+
+        // Update chat manager
+        if (chatManager) {
+          await chatManager.gptNano.updateSystemPrompt(newPrompt);
+          appendMessage({ text: 'System prompt updated successfully!' }, false);
+        }
+
+        // Hide settings panel
+        settingsPanel.classList.add('hidden');
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        appendMessage(
+          { text: 'Failed to update system prompt: ' + error.message },
+          false
+        );
+      }
+    });
+  }
+
   async function initialize() {
     if (isInitializing) return;
     isInitializing = true;
@@ -212,6 +270,8 @@ import { ChatManager } from './lib/chatManager';
     try {
       chatManager = new ChatManager();
       await chatManager.initialize();
+
+      setupSettingsPanel();
 
       // Update initialization message
       const messages = document.getElementById('chat-messages');
